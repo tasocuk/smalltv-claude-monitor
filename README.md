@@ -4,7 +4,8 @@ Custom, from-scratch firmware that turns a cheap **GeekMagic SmallTV** (ESP8266,
 
 > Firmware written in C++/Arduino (PlatformIO). A tiny Python agent pushes data to the device over your LAN. Replaces the stock GeekMagic firmware (reversible via OTA).
 
-![screen](docs/mockup-claude.svg)
+<p align="center"><img src="docs/device.jpg" width="430" alt="SmallTV Claude Monitor — Glow theme"></p>
+<p align="center"><em>The animated "Glow" theme showing live Claude usage limits — in Turkish.</em></p>
 
 ## Features
 
