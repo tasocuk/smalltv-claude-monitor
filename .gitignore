@@ -1,0 +1,13 @@
+# --- Secrets: asla commit edilmez (WiFi SSID + sifre) ---
+src/secrets.h
+
+# --- Yerel-only: public repoya girmez ---
+restore/
+*.credentials*
+*.token*
+*.bin
+
+# --- Build & IDE ---
+.pio/
+.vscode/
+.DS_Store

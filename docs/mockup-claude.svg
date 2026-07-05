@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="480" height="480">
+  <rect width="240" height="240" fill="#000"/>
+  <rect x="16" y="7" width="3" height="3" fill="#ff6b4a"/><rect x="25" y="7" width="3" height="3" fill="#ff6b4a"/><rect x="13" y="10" width="3" height="3" fill="#ff6b4a"/><rect x="16" y="10" width="3" height="3" fill="#ff6b4a"/><rect x="19" y="10" width="3" height="3" fill="#ff6b4a"/><rect x="22" y="10" width="3" height="3" fill="#ff6b4a"/><rect x="25" y="10" width="3" height="3" fill="#ff6b4a"/><rect x="28" y="10" width="3" height="3" fill="#ff6b4a"/><rect x="10" y="13" width="3" height="3" fill="#ff6b4a"/><rect x="13" y="13" width="3" height="3" fill="#ff6b4a"/><rect x="19" y="13" width="3" height="3" fill="#ff6b4a"/><rect x="22" y="13" width="3" height="3" fill="#ff6b4a"/><rect x="28" y="13" width="3" height="3" fill="#ff6b4a"/><rect x="31" y="13" width="3" height="3" fill="#ff6b4a"/><rect x="10" y="16" width="3" height="3" fill="#ff6b4a"/><rect x="13" y="16" width="3" height="3" fill="#ff6b4a"/><rect x="16" y="16" width="3" height="3" fill="#ff6b4a"/><rect x="19" y="16" width="3" height="3" fill="#ff6b4a"/><rect x="22" y="16" width="3" height="3" fill="#ff6b4a"/><rect x="25" y="16" width="3" height="3" fill="#ff6b4a"/><rect x="28" y="16" width="3" height="3" fill="#ff6b4a"/><rect x="31" y="16" width="3" height="3" fill="#ff6b4a"/><rect x="13" y="19" width="3" height="3" fill="#ff6b4a"/><rect x="16" y="19" width="3" height="3" fill="#ff6b4a"/><rect x="25" y="19" width="3" height="3" fill="#ff6b4a"/><rect x="28" y="19" width="3" height="3" fill="#ff6b4a"/><rect x="13" y="22" width="3" height="3" fill="#ff6b4a"/><rect x="28" y="22" width="3" height="3" fill="#ff6b4a"/>
+  <text x="120" y="23" font-family="Georgia,serif" font-size="20" font-weight="700" fill="#fff" text-anchor="middle">Kullanim</text>
+  <path d="M 207.9 22.5 A 7 7 0 0 1 220.1 22.5" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M 203.6 20.0 A 12 12 0 0 1 224.4 20.0" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M 199.2 17.5 A 17 17 0 0 1 228.8 17.5" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="214" cy="26" r="2.2" fill="#fff"/>
+  
+  <rect x="6" y="36" width="228" height="92" rx="12" fill="#202024"/>
+  <text x="22" y="88" font-family="Arial" font-size="44" font-weight="800" fill="#fff">18<tspan font-size="24" font-weight="700">%</tspan></text>
+  <rect x="148" y="50" width="78" height="24" rx="12" fill="#3a3a48"/>
+  <text x="187.0" y="66" font-family="Arial" font-size="14" fill="#fff" text-anchor="middle">Anlik</text>
+  <rect x="22" y="98" width="196" height="12" rx="6.0" fill="#4a3d5c"/><rect x="22" y="98" width="35" height="12" rx="6.0" fill="#ff6b4a"/>
+  <text x="22" y="122" font-family="Arial" font-size="13" fill="#c0c0c8">2sa 30dk sonra sifirlanir</text>
+  
+  <rect x="6" y="132" width="228" height="92" rx="12" fill="#202024"/>
+  <text x="22" y="184" font-family="Arial" font-size="44" font-weight="800" fill="#fff">18<tspan font-size="24" font-weight="700">%</tspan></text>
+  <rect x="140" y="146" width="86" height="24" rx="12" fill="#3a3a48"/>
+  <text x="183.0" y="162" font-family="Arial" font-size="14" fill="#fff" text-anchor="middle">Haftalik</text>
+  <rect x="22" y="194" width="196" height="12" rx="6.0" fill="#4a3d5c"/><rect x="22" y="194" width="35" height="12" rx="6.0" fill="#c4e64a"/>
+  <text x="22" y="218" font-family="Arial" font-size="13" fill="#c0c0c8">3g 8sa sonra sifirlanir</text>
+  <text x="120" y="236" font-family="Arial" font-size="12" fill="#ff8a4b" text-anchor="middle">* Dusunuyor...</text>
+</svg>
