@@ -53,7 +53,7 @@ ESP8266WebServer        server(80);
 ESP8266HTTPUpdateServer httpUpdater;
 
 struct PcStats { float cpu=0,ram=0,cpu_t=-1,cpu_ghz=-1,ram_used=-1,ram_total=-1; char host[24]=""; uint32_t lastUpdate=0; } st;
-struct ClaudeStats { int h5=-1,d7=-1; long h5_reset=0,d7_reset=0; uint32_t lastUpdate=0; } cl;
+struct ClaudeStats { int h5=-1,d7=-1; long h5_reset=0,d7_reset=0; uint32_t lastUpdate=0; char err[32]=""; } cl;
 
 // -------- Config (LittleFS /config.json) --------
 struct Config {
@@ -219,6 +219,15 @@ void drawClaudeReset(int CY,long ep){
   tft.setTextDatum(ML_DATUM); tft.setFreeFont(&trFontS); tft.setTextColor(COL_GRAY,COL_CARD);
   tft.drawString(String(t)+" "+asciiTr(cfg.resetSuffix),LUX+14,CY+L_cardH-10);
 }
+// alt satir: hata varsa (ornek: "Claude girisi gerekli") onu, yoksa donen kelimeyi yazar
+void drawFooter(uint16_t col){
+  tft.fillRect(LUX,L_footCY-9,LUW,18,COL_BG);
+  tft.setTextDatum(MC_DATUM); tft.setFreeFont(&trFontS);
+  if(cl.err[0]){ tft.setTextColor(COL_CORAL,COL_BG); tft.drawString(asciiTr(String("! ")+cl.err),LUX+LUW/2,L_footCY); return; }
+  const String words[4]={cfg.f0,cfg.f1,cfg.f2,cfg.f3}; footIdx=(footIdx+1)&3;
+  tft.setTextColor(col,COL_BG);
+  tft.drawString(String("* ")+asciiTr(words[footIdx]),LUX+LUW/2,L_footCY);
+}
 void drawClaudeStaticClassic(){
   tft.fillScreen(COL_BG);
   drawMascot(LUX+2,L_headCY-9);
@@ -229,10 +238,7 @@ void drawClaudeStaticClassic(){
   tft.fillRoundRect(LUX,L_CY2,LUW,L_cardH,12,COL_CARD);
   drawPillR(LUX+LUW-8,L_CY1+12,24,asciiTr(cfg.pill5));
   drawPillR(LUX+LUW-8,L_CY2+12,24,asciiTr(cfg.pill7));
-  const String words[4]={cfg.f0,cfg.f1,cfg.f2,cfg.f3}; footIdx=(footIdx+1)&3;
-  tft.fillRect(LUX,L_footCY-9,LUW,18,COL_BG);
-  tft.setTextDatum(MC_DATUM); tft.setFreeFont(&trFontS); tft.setTextColor(COL_ACCENT,COL_BG);
-  tft.drawString(String("* ")+asciiTr(words[footIdx]),LUX+LUW/2,L_footCY);
+  drawFooter(COL_ACCENT);
   prevA=prevB=-1;
 }
 void renderClaudeClassic(bool online){
@@ -294,10 +300,7 @@ void drawClaudeStaticGlow(){
   tft.setTextDatum(MC_DATUM); tft.setFreeFont(&trFontL); tft.setTextColor(COL_TEXT,COL_BG);
   tft.drawString(asciiTr(cfg.title),LUX+LUW/2,L_headCY);
   drawWifiFilled(LUX+LUW-12,L_headCY+2,clOnline());
-  const String words[4]={cfg.f0,cfg.f1,cfg.f2,cfg.f3}; footIdx=(footIdx+1)&3;
-  tft.fillRect(LUX,L_footCY-9,LUW,18,COL_BG);
-  tft.setTextDatum(MC_DATUM); tft.setFreeFont(&trFontS); tft.setTextColor(COL_GRAY,COL_BG);
-  tft.drawString(String("* ")+asciiTr(words[footIdx]),LUX+LUW/2,L_footCY);
+  drawFooter(COL_GRAY);
   prevA=prevB=-1;
 }
 void renderClaudeGlow(bool online){
@@ -332,84 +335,147 @@ void tick(){
 }
 
 // ============================ WEB PANEL ============================
-const char CFG_HTML[] PROGMEM = R"HTML(<!doctype html><html><head><meta charset=utf-8>
-<meta name=viewport content='width=device-width,initial-scale=1'><title>SmallTV Panel</title>
+const char CFG_HTML[] PROGMEM = R"HTML(<!doctype html><html lang=tr><head><meta charset=utf-8>
+<meta name=viewport content='width=device-width,initial-scale=1,viewport-fit=cover'><meta name=theme-color content='#0b0b10'><title>SmallTV</title>
 <style>
-body{font-family:system-ui,sans-serif;background:#0f0f12;color:#eee;margin:0;padding:14px;max-width:520px;margin:auto}
-h1{font-size:19px;margin:6px 0 14px}h2{font-size:14px;color:#ff8a4b;margin:18px 0 8px;border-bottom:1px solid #2a2a30;padding-bottom:4px}
-.row{display:flex;align-items:center;gap:10px;margin:7px 0}.row label{flex:1;font-size:14px}
-input[type=text]{width:100%;padding:8px;border-radius:6px;border:1px solid #33333a;background:#1a1a1f;color:#fff;box-sizing:border-box}
-input[type=range]{flex:2}input[type=number]{width:64px;padding:6px;border-radius:6px;border:1px solid #33333a;background:#1a1a1f;color:#fff}
-.v{width:34px;text-align:right;color:#ff8a4b;font-variant-numeric:tabular-nums}
-button{padding:11px 16px;border:0;border-radius:8px;background:#2b7a4b;color:#fff;font-size:15px;width:100%;margin-top:16px}
-.sec{background:#16161a;border-radius:10px;padding:10px 12px;margin:10px 0}
-canvas{background:#000;border-radius:8px;display:block;margin:6px auto;border:1px solid #333}
-.mini{display:flex;gap:8px}.mini button{width:auto;margin:0;background:#33333a;padding:8px 12px;font-size:13px}
-small{color:#888}
-</style></head><body>
-<h1>📺 SmallTV Kontrol Paneli</h1>
-<div class=sec><h2 style=margin-top:0>Onizleme + Guvenli Alan (Deadzone)</h2>
-<canvas id=pv width=240 height=240></canvas>
-<div class=row><label>Ust</label><input type=range id=sTop min=0 max=30><span class=v id=sTopv></span></div>
-<div class=row><label>Alt</label><input type=range id=sBot min=0 max=30><span class=v id=sBotv></span></div>
-<div class=row><label>Sol</label><input type=range id=sLeft min=0 max=30><span class=v id=sLeftv></span></div>
-<div class=row><label>Sag</label><input type=range id=sRight min=0 max=30><span class=v id=sRightv></span></div>
-<small>Kenarda kesilen olursa ilgili boslugu artir.</small></div>
+:root{--bg:#0b0b10;--card:#15151c;--card2:#1c1c25;--line:#262631;--tx:#f2f2f5;--mu:#8b8b99;--co:#ff7a59;--te:#2fd3c0;--ok:#3ddc84;--bad:#ff5f6d;--r:16px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--tx);background:radial-gradient(900px 500px at 10% -10%,#ff7a5922,transparent 60%),radial-gradient(800px 500px at 110% 10%,#2fd3c01c,transparent 60%),var(--bg);min-height:100vh}
+.w{max-width:560px;margin:auto;padding:18px 16px 110px}
+header{display:flex;align-items:center;gap:12px;margin:4px 0 18px}
+.logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--co),#ffb36b);display:grid;place-items:center;font-size:20px;box-shadow:0 6px 20px #ff7a5944}
+header h1{font-size:19px;margin:0;font-weight:650;letter-spacing:-.2px}
+header p{margin:0;color:var(--mu);font-size:13px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mu);margin-right:6px;vertical-align:1px}
+.dot.on{background:var(--ok);box-shadow:0 0 0 4px #3ddc8422}.dot.off{background:var(--bad)}
+.card{background:linear-gradient(180deg,var(--card),#121218);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin:12px 0}
+.card h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.9px;color:var(--mu);margin:0 0 12px;display:flex;justify-content:space-between;align-items:center}
+.alert{display:none;background:#ff5f6d18;border:1px solid #ff5f6d55;color:#ffb3b9;border-radius:12px;padding:10px 12px;font-size:13.5px;margin-bottom:12px}
+.lim{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.m{background:var(--card2);border-radius:14px;padding:14px;position:relative;overflow:hidden}
+.m .k{font-size:12.5px;color:var(--mu)}
+.m .n{font-size:32px;font-weight:700;letter-spacing:-1px;margin:2px 0 8px;font-variant-numeric:tabular-nums}
+.m .n small{font-size:15px;color:var(--mu);font-weight:500}
+.bar{height:7px;border-radius:9px;background:#ffffff12;overflow:hidden}
+.bar i{display:block;height:100%;width:0;border-radius:9px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.c5 i{background:linear-gradient(90deg,#ff5f4a,var(--co),#ffb36b)}.c7 i{background:linear-gradient(90deg,#16a99a,var(--te),#8ff5e6)}
+.m .rs{font-size:12px;color:var(--mu);margin-top:8px}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.chip{background:var(--card2);border:1px solid var(--line);border-radius:99px;padding:5px 11px;font-size:12.5px;color:var(--mu)}
+.chip b{color:var(--tx);font-weight:600}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0;padding-top:2px}
+.row label{font-size:14.5px}.row .sub{display:block;font-size:12px;color:var(--mu)}
+.sw{position:relative;width:46px;height:28px;flex:none}.sw input{opacity:0;width:0;height:0}
+.sw span{position:absolute;inset:0;background:#33333f;border-radius:99px;transition:.2s;cursor:pointer}
+.sw span:before{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 2px 6px #0006}
+.sw input:checked+span{background:var(--ok)}.sw input:checked+span:before{transform:translateX(18px)}
+.seg{display:inline-flex;background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:3px}
+.seg button{border:0;background:none;color:var(--mu);padding:7px 12px;border-radius:8px;font:inherit;font-size:13px;cursor:pointer}
+.seg button.a{background:#ffffff14;color:var(--tx)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:9px;background:#ffffff14;outline:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:4px solid var(--co);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:4px solid var(--co)}
+.rg{display:grid;grid-template-columns:52px 1fr 32px;align-items:center;gap:10px;padding:7px 0;font-size:14px}
+.rg .v{text-align:right;color:var(--co);font-variant-numeric:tabular-nums;font-size:13px}
+input[type=text],input[type=number]{width:100%;padding:10px 12px;border-radius:11px;border:1px solid var(--line);background:var(--card2);color:var(--tx);font:inherit;outline:0;transition:border .15s}
+input:focus{border-color:var(--co)}
+input[type=number]{width:84px;text-align:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f label{display:block;font-size:12.5px;color:var(--mu);margin:0 0 5px}
+.pv{display:flex;justify-content:center;margin:4px 0 10px}
+canvas{border-radius:14px;background:#000;box-shadow:0 0 0 1px var(--line),0 12px 30px #0008;width:200px;height:200px}
+.btn{border:0;border-radius:12px;padding:11px 16px;font:inherit;font-weight:600;cursor:pointer;background:var(--card2);color:var(--tx);border:1px solid var(--line)}
+.bar2{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,#0b0b10 35%)}
+.bar2 .in{max-width:560px;margin:auto;display:flex;gap:10px}
+.save{flex:1;background:linear-gradient(135deg,var(--co),#ff9e6b);color:#1a0d08;border:0;box-shadow:0 8px 24px #ff7a5944}
+.save:disabled{opacity:.5}
+.toast{position:fixed;left:50%;bottom:86px;transform:translate(-50%,20px);background:#22222c;border:1px solid var(--line);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none}
+.toast.s{opacity:1;transform:translate(-50%,0)}
+.links{text-align:center;font-size:13px;color:var(--mu)}.links a{color:var(--mu);margin:0 8px}
+</style></head><body><div class=w>
+<header><div class=logo>📺</div><div><h1>SmallTV</h1><p id=sub><span class=dot></span>bağlanıyor…</p></div></header>
 
-<div class=sec><h2 style=margin-top:0>Ekranlar</h2>
-<div class=row><label>PC ekrani (CPU/RAM)</label><input type=checkbox id=pcOn></div>
-<div class=row><label>Claude ekrani</label><input type=checkbox id=clOn></div>
-<div class=row><label>Rotasyon (sn, 0=kapali)</label><input type=number id=rotSec min=0 max=120></div>
-<div class=mini><button onclick=switchNow()>Simdi gecis yap</button></div></div>
+<div class=card><h2>Claude limiti <span id=age></span></h2>
+<div class=alert id=err></div>
+<div class=lim>
+<div class=m><div class=k id=k5>5 saatlik</div><div class=n id=n5>–</div><div class="bar c5"><i id=b5></i></div><div class=rs id=r5>&nbsp;</div></div>
+<div class=m><div class=k id=k7>Haftalık</div><div class=n id=n7>–</div><div class="bar c7"><i id=b7></i></div><div class=rs id=r7>&nbsp;</div></div>
+</div>
+<div class=stats><span class=chip>PC <b id=pc>–</b></span><span class=chip>Wi-Fi <b id=rssi>–</b></span><span class=chip>Açık <b id=up>–</b></span></div>
+</div>
 
-<div class=sec><h2 style=margin-top:0>Gorunum</h2>
-<div class=row><label>Parlaklik</label><input type=range id=bright min=5 max=255><span class=v id=brightv></span></div>
-<div class=row><label>Claude modu</label><select id=cUsed style=padding:7px;border-radius:6px;background:#1a1a1f;color:#fff;border:1px solid #33333a><option value=1>Kullanilan %</option><option value=0>Kalan %</option></select></div>
-<div class=row><label>Claude temasi</label><select id=theme style=padding:7px;border-radius:6px;background:#1a1a1f;color:#fff;border:1px solid #33333a><option value=1>Parlak (animasyonlu)</option><option value=0>Klasik</option></select></div></div>
+<div class=card><h2>Ekranlar</h2>
+<div class=row><label>Claude limiti<span class=sub>5 saat + haftalık kullanım</span></label><label class=sw><input type=checkbox id=clOn><span></span></label></div>
+<div class=row><label>PC durumu<span class=sub>CPU / RAM</span></label><label class=sw><input type=checkbox id=pcOn><span></span></label></div>
+<div class=row><label>Geçiş süresi<span class=sub>saniye · 0 = kapalı</span></label><input type=number id=rotSec min=0 max=600></div>
+<div class=row><label>Ekranı değiştir</label><button class=btn onclick=sw()>Şimdi geç</button></div>
+</div>
 
-<div class=sec><h2 style=margin-top:0>Metinler</h2>
-<div class=row><label>Baslik</label></div><input type=text id=title>
-<div class=row><label>5 saat rozeti</label></div><input type=text id=pill5>
-<div class=row><label>7 gun rozeti</label></div><input type=text id=pill7>
-<div class=row><label>Reset eki</label></div><input type=text id=rsuf>
-<div class=row><label>Footer kelimeleri</label></div>
-<input type=text id=f0><input type=text id=f1 style=margin-top:6px><input type=text id=f2 style=margin-top:6px><input type=text id=f3 style=margin-top:6px></div>
+<div class=card><h2>Görünüm</h2>
+<div class=row><label>Gösterim</label><div class=seg id=cUsed><button data-v=1>Kullanılan</button><button data-v=0>Kalan</button></div></div>
+<div class=row><label>Tema</label><div class=seg id=theme><button data-v=1>Parlak</button><button data-v=0>Klasik</button></div></div>
+<div class=rg style=margin-top:6px><span>Işık</span><input type=range id=bright min=5 max=255><span class=v id=brightv></span></div>
+</div>
 
-<button onclick=save()>KAYDET & UYGULA</button>
-<p style=text-align:center><a href='/update' style=color:#7af>Firmware</a> &nbsp; <a href='/wifi' style=color:#7af>WiFi</a></p>
+<div class=card><h2>Güvenli alan</h2>
+<div class=pv><canvas id=pv width=240 height=240></canvas></div>
+<div class=rg><span>Üst</span><input type=range id=sTop min=0 max=30><span class=v id=sTopv></span></div>
+<div class=rg><span>Alt</span><input type=range id=sBot min=0 max=30><span class=v id=sBotv></span></div>
+<div class=rg><span>Sol</span><input type=range id=sLeft min=0 max=30><span class=v id=sLeftv></span></div>
+<div class=rg><span>Sağ</span><input type=range id=sRight min=0 max=30><span class=v id=sRightv></span></div>
+</div>
+
+<div class=card><h2>Metinler</h2>
+<div class=f><label>Başlık</label><input type=text id=title maxlength=24></div>
+<div class=grid2 style=margin-top:10px><div class=f><label>5 saat rozeti</label><input type=text id=pill5 maxlength=12></div><div class=f><label>Haftalık rozeti</label><input type=text id=pill7 maxlength=12></div></div>
+<div class=f style=margin-top:10px><label>Sıfırlanma eki</label><input type=text id=rsuf maxlength=24></div>
+<div class=f style=margin-top:10px><label>Alt satır kelimeleri</label><div class=grid2><input type=text id=f0 maxlength=16><input type=text id=f1 maxlength=16><input type=text id=f2 maxlength=16><input type=text id=f3 maxlength=16></div></div>
+</div>
+<p class=links><a href=/update>Firmware</a>·<a href=/wifi>Wi-Fi</a>·<a href=/health>health</a></p>
+</div>
+<div class=bar2><div class=in><button class="btn save" id=sv onclick=save()>Kaydet ve uygula</button></div></div>
+<div class=toast id=t></div>
 <script>
-var F=['sTop','sBot','sLeft','sRight','pcOn','clOn','rotSec','bright','cUsed','title','pill5','pill7','rsuf','f0','f1','f2','f3'];
-function g(i){return document.getElementById(i)}
-function draw(){var c=g('pv'),x=c.getContext('2d');x.clearRect(0,0,240,240);
- var t=+g('sTop').value,b=+g('sBot').value,l=+g('sLeft').value,r=+g('sRight').value;
- var ux=l,uy=t,uw=240-l-r,uh=240-t-b;
- x.strokeStyle='#444';x.strokeRect(0.5,0.5,239,239);
- x.strokeStyle='#ff8a4b';x.setLineDash([4,3]);x.strokeRect(ux,uy,uw,uh);x.setLineDash([]);
- var hH=26,fH=14,gap=6,cH=(uh-hH-fH-gap)/2;
- x.fillStyle='#c0392b';x.fillRect(ux+2,uy+8,18,12);
- x.fillStyle='#fff';x.font='13px sans-serif';x.textAlign='center';x.fillText(g('title').value||'Kullanim',ux+uw/2,uy+17);
- function card(cy,col){x.fillStyle='#202024';x.fillRect(ux,cy,uw,cH);x.fillStyle='#fff';x.font='bold 22px sans-serif';x.textAlign='left';x.fillText('18%',ux+10,cy+cH*0.5);x.fillStyle=col;x.fillRect(ux+10,cy+cH-16,uw*0.2,7)}
- card(uy+hH,'#ff6b4a');card(uy+hH+cH+gap,'#c4e64a');
- x.fillStyle='#ff8a4b';x.font='11px sans-serif';x.textAlign='center';x.fillText('* '+(g('f0').value||'...'),ux+uw/2,uy+uh-3);
-}
-['sTop','sBot','sLeft','sRight'].forEach(i=>{g(i).oninput=()=>{g(i+'v').textContent=g(i).value;draw()}});
-g('bright').oninput=()=>g('brightv').textContent=g('bright').value;
-['title','f0'].forEach(i=>g(i).oninput=draw);
-function load(){fetch('/config.json').then(r=>r.json()).then(c=>{
- for(var k in c){var e=g(k);if(!e)continue;if(e.type=='checkbox')e.checked=!!c[k];else e.value=c[k];}
- g('sTopv').textContent=c.sTop;g('sBotv').textContent=c.sBot;g('sLeftv').textContent=c.sLeft;g('sRightv').textContent=c.sRight;g('brightv').textContent=c.bright;
- g('cUsed').value=c.cUsed?1:0;g('theme').value=c.theme;draw();});}
-function save(){var o={};
- o.sTop=+g('sTop').value;o.sBot=+g('sBot').value;o.sLeft=+g('sLeft').value;o.sRight=+g('sRight').value;
- o.pcOn=g('pcOn').checked;o.clOn=g('clOn').checked;o.rotSec=+g('rotSec').value;o.bright=+g('bright').value;o.cUsed=+g('cUsed').value;o.theme=+g('theme').value;
- o.title=g('title').value;o.pill5=g('pill5').value;o.pill7=g('pill7').value;o.rsuf=g('rsuf').value;
- o.f0=g('f0').value;o.f1=g('f1').value;o.f2=g('f2').value;o.f3=g('f3').value;
- fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}).then(r=>r.text()).then(t=>alert(t));}
-function switchNow(){fetch('/switch',{method:'POST'}).then(r=>r.text()).then(t=>{});}
-load();
+var $=function(i){return document.getElementById(i)},C={};
+function toast(m){var t=$('t');t.textContent=m;t.classList.add('s');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('s')},2200)}
+function seg(id,v){[].forEach.call($(id).children,function(b){b.classList.toggle('a',b.dataset.v==String(v))});$(id).dataset.v=v}
+['cUsed','theme'].forEach(function(id){$(id).onclick=function(e){if(e.target.dataset.v!=null){seg(id,e.target.dataset.v);draw();poll()}}});
+function rr(x,X,Y,W,H,R){x.beginPath();x.moveTo(X+R,Y);x.arcTo(X+W,Y,X+W,Y+H,R);x.arcTo(X+W,Y+H,X,Y+H,R);x.arcTo(X,Y+H,X,Y,R);x.arcTo(X,Y,X+W,Y,R);x.fill()}
+function draw(){var x=$('pv').getContext('2d');x.fillStyle='#000';x.fillRect(0,0,240,240);
+ var t=+$('sTop').value,b=+$('sBot').value,l=+$('sLeft').value,r=+$('sRight').value,ux=l,uy=t,uw=240-l-r,uh=240-t-b;
+ var hH=26,fH=14,gap=6,cH=(uh-hH-fH-gap)/2,gl=$('theme').dataset.v=='1';
+ x.fillStyle='#fff';x.font='600 13px system-ui';x.textAlign='center';x.fillText($('title').value||'Kullanım',ux+uw/2,uy+17);
+ x.fillStyle='#ff7a59';x.fillRect(ux+3,uy+7,14,12);
+ function card(cy,c1,c2){x.fillStyle=gl?c2:'#202024';rr(x,ux,cy,uw,cH,12);if(gl){x.strokeStyle=c1;x.lineWidth=1.5;x.beginPath();x.roundRect?x.roundRect(ux+.5,cy+.5,uw-1,cH-1,12):0;x.stroke()}
+  x.fillStyle='#fff';x.font='bold 26px system-ui';x.textAlign='left';x.fillText('18%',ux+12,cy+cH*.55);x.fillStyle='#ffffff18';rr(x,ux+12,cy+cH-17,uw-24,7,3);x.fillStyle=c1;rr(x,ux+12,cy+cH-17,(uw-24)*.18,7,3)}
+ card(uy+hH,'#ff7a59','#2a1612');card(uy+hH+cH+gap,'#2fd3c0','#0f2523');
+ x.fillStyle='#999';x.font='11px system-ui';x.textAlign='center';x.fillText('* '+($('f0').value||'…'),ux+uw/2,uy+uh-3);
+ x.strokeStyle='#ff7a59';x.lineWidth=1;x.setLineDash([4,3]);x.strokeRect(ux+.5,uy+.5,uw-1,uh-1);x.setLineDash([])}
+['sTop','sBot','sLeft','sRight','bright'].forEach(function(i){$(i).oninput=function(){$(i+'v').textContent=$(i).value;draw()}});
+['title','f0'].forEach(function(i){$(i).oninput=draw});
+function load(){fetch('/config.json').then(function(r){return r.json()}).then(function(c){C=c;
+ for(var k in c){var e=$(k);if(!e||e.classList.contains('seg'))continue;if(e.type=='checkbox')e.checked=!!c[k];else e.value=c[k];if($(k+'v'))$(k+'v').textContent=c[k]}
+ seg('cUsed',c.cUsed?1:0);seg('theme',c.theme);$('k5').textContent=c.pill5||'5 saatlik';$('k7').textContent=c.pill7||'Haftalık';draw()})}
+function save(){var o={},b=$('sv');['sTop','sBot','sLeft','sRight','rotSec','bright'].forEach(function(k){o[k]=+$(k).value});
+ o.pcOn=$('pcOn').checked;o.clOn=$('clOn').checked;o.cUsed=+$('cUsed').dataset.v;o.theme=+$('theme').dataset.v;
+ ['title','pill5','pill7','rsuf','f0','f1','f2','f3'].forEach(function(k){o[k]=$(k).value});
+ b.disabled=true;fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}).then(function(r){return r.text()}).then(function(t){toast('✓ '+t)}).catch(function(){toast('Kaydedilemedi')}).then(function(){b.disabled=false})}
+function sw(){fetch('/switch',{method:'POST'}).then(function(){toast('Ekran değişti')})}
+function dur(s){if(s<=0)return'';var d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return d?d+'g '+h+'s':h?h+'s '+m+'dk':m+'dk'}
+function lim(n,v,rs,used){var p=v<0?-1:(used?v:100-v);$('n'+n).innerHTML=p<0?'–':p+'<small>%</small>';$('b'+n).style.width=(p<0?0:p)+'%';
+ var now=Date.now()/1000;$('r'+n).textContent=rs>now?dur(rs-now)+' sonra sıfırlanır':' '}
+function poll(){fetch('/health').then(function(r){return r.json()}).then(function(h){
+ var on=h.cl_online&&!h.cl_err;$('sub').innerHTML='<span class="dot '+(on?'on':'off')+'"></span>'+h.ip+' · '+(on?'veri geliyor':h.cl_err?'Claude bağlantı hatası':'ajan veri göndermiyor');
+ var e=$('err');if(h.cl_err){e.style.display='block';e.textContent='⚠ '+h.cl_err+' — bilgisayarda terminalde: claude → /login'}else if(!h.cl_online){e.style.display='block';e.textContent='⚠ Bilgisayardaki SmallTV ajanından veri gelmiyor.'}else e.style.display='none';
+ var u=$('cUsed').dataset.v=='1';lim(5,h.h5,h.h5_reset,u);lim(7,h.d7,h.d7_reset,u);
+ $('age').textContent=h.cl_age>=0?(h.cl_age<60?h.cl_age+' sn önce':Math.round(h.cl_age/60)+' dk önce'):'';
+ $('pc').textContent=h.pc_online?Math.round(h.cpu)+'% CPU · '+Math.round(h.ram)+'% RAM':'kapalı';
+ $('rssi').textContent=h.rssi+' dBm';$('up').textContent=dur(h.up)||'<1dk'}).catch(function(){$('sub').innerHTML='<span class="dot off"></span>cihaza ulaşılamıyor'})}
+load();poll();setInterval(poll,5000);
 </script></body></html>)HTML";
 
-void handleCfgPage(){ server.send_P(200,"text/html",CFG_HTML); }
+void handleCfgPage(){ server.send_P(200,"text/html; charset=utf-8",CFG_HTML); }
 void handleCfgJson(){
   JsonDocument d;
   d["sTop"]=cfg.sTop;d["sBot"]=cfg.sBot;d["sLeft"]=cfg.sLeft;d["sRight"]=cfg.sRight;
@@ -450,12 +516,18 @@ void handleStats(){
 void handleClaude(){
   if(server.method()!=HTTP_POST){server.send(405,"text/plain","POST only");return;}
   JsonDocument doc; if(deserializeJson(doc,server.arg("plain"))){server.send(400,"text/plain","bad json");return;}
-  cl.h5=doc["h5"]|cl.h5; cl.d7=doc["d7"]|cl.d7; cl.h5_reset=doc["h5_reset"]|cl.h5_reset; cl.d7_reset=doc["d7_reset"]|cl.d7_reset;
+  const char* e=doc["err"]|"";
+  bool hadErr=cl.err[0]!=0;
+  strncpy(cl.err,e,sizeof(cl.err)-1); cl.err[sizeof(cl.err)-1]=0;
+  if(!cl.err[0]){ cl.h5=doc["h5"]|cl.h5; cl.d7=doc["d7"]|cl.d7; cl.h5_reset=doc["h5_reset"]|cl.h5_reset; cl.d7_reset=doc["d7_reset"]|cl.d7_reset; }
   cl.lastUpdate=millis(); server.send(200,"text/plain","OK");
+  if(hadErr!=(cl.err[0]!=0) && screen==1) needStatic=true;
 }
 void handleHealth(){
   JsonDocument d; d["pc_online"]=pcOnline();d["cpu"]=st.cpu;d["ram"]=st.ram;d["host"]=st.host;
-  d["cl_online"]=clOnline();d["h5"]=cl.h5;d["d7"]=cl.d7;d["ip"]=WiFi.localIP().toString();
+  d["cl_online"]=clOnline();d["h5"]=cl.h5;d["d7"]=cl.d7;d["h5_reset"]=cl.h5_reset;d["d7_reset"]=cl.d7_reset;d["cl_err"]=cl.err;
+  d["cl_age"]=cl.lastUpdate?(long)((millis()-cl.lastUpdate)/1000):-1;d["screen"]=screen;
+  d["ip"]=WiFi.localIP().toString();d["rssi"]=WiFi.RSSI();d["up"]=(long)(millis()/1000);d["heap"]=ESP.getFreeHeap();
   String o; serializeJson(d,o); server.send(200,"application/json",o);
 }
 void handleWifiGet(){

@@ -11,3 +11,7 @@ restore/
 .pio/
 .vscode/
 .DS_Store
+
+# --- Ajan calisma dosyalari ---
+agent/agent.log*
+agent/device.txt
